@@ -1,6 +1,12 @@
 # CCD (Chrysler Collision Detect) Data Bus protocol decoder for Sigrok
 
-This protocol decoder is heavily based and tested on dumps from Jeep ZJ '98
+![Pulseview with CCD decoder](pulseview-screenshot.png)
+
+This protocol decoder is heavily based and tested on dumps from Jeep ZJ '98.
+
+
+
+# Credits
 
 It's alive because:
 - First inspiration: http://www.kolumbus.fi/juha.niinikoski/CCD_bus/ccd_display.htm
@@ -10,6 +16,7 @@ It's alive because:
 - Forum topic at: http://thespeedfreaks.net/showthread.php?12585-CCDuino-A-ZJ-Databus-Project/
 - Another CCD project: https://chryslerccdsci.wordpress.com/
 - projects from https://github.com/xerootg/
+- Google Sheet with data: https://docs.google.com/spreadsheets/d/1-7Ahhgu7fPNAfORWXrjADwHnI8PiozMbrc1AF3RrglQ
 
 and of course because of great extendable logic analyzer: https://sigrok.org/
 

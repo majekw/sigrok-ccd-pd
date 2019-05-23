@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2017 Marek Wodzinski <majek@mamy.to>
+## Copyright (C) 2017-2019 Marek Wodzinski <majek@w7i.pl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -22,10 +22,7 @@ import sigrokdecode as srd
 from math import floor, ceil
 
 '''
-OUTPUT_PYTHON format:
-
-TO DO!!!!!!!!!!
-Packet:
+no OUTPUT_PYTHON and OUTPUT_BINARY:-(
 '''
 
 
@@ -37,7 +34,7 @@ class SamplerateError(Exception):
 # main decoder class
 class Decoder(srd.Decoder):
     # api keys
-    api_version = 2
+    api_version = 3
     id = 'ccd'
     name = 'CCD'
     longname = 'CCD (Crysler Collision Detection) Data Bus'
@@ -135,7 +132,7 @@ class Decoder(srd.Decoder):
             # 4 bytes total
             # 0xe4, AA, BB, checksum
             # rpm = AA*32 rpm
-            # map = BB*0.41 kPa / BB
+            # map = BB*0.41 kPa
             rpm = str(self.ccd_message[1]*32)
             mapsensor = str(round(self.ccd_message[2]*0.41))
             self.ccd_ann(['RPM: '+rpm+' rpm, MAP: '+mapsensor+' kPa', 'RPM='+rpm+',MAP='+mapsensor,'R'+rpm+',M'+mapsensor])
@@ -420,15 +417,16 @@ class Decoder(srd.Decoder):
 
 
     # Main decode function called by API
-    def decode(self, ss, es, data):
+    def decode(self):
 	# check if samplerate is set
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
         
         # iterate through sample data (samplenum, channels)
-        for (self.samplenum, channels) in data:
+        while True:
 
-            bus = int.from_bytes(channels, byteorder='little')
+            pins = self.wait()
+            bus = int.from_bytes(pins, byteorder='little')
 
 	    # invert input if requested
             if self.options['invert_bus'] == 'yes':

@@ -463,7 +463,7 @@ class Decoder(srd.Decoder):
                     if byte != chksum:
                         # emit annotation for bad checksum
                         self.put(self.busystart, self.samplenum-1, self.out_ann, [4, ['Checksum error', 'Bad sum', 'CHK']])
-                        self.errors =+ 1
+                        self.errors += 1
                         
                     if self.errors == 0 or self.options['ignoreerrors'] == 'yes':
                         # process frame only if no errors

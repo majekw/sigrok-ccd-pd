@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2017-2019 Marek Wodzinski <majek@w7i.pl>
+## Copyright (C) 2017-2020 Marek Wodzinski <majek@w7i.pl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -92,6 +92,9 @@ class Decoder(srd.Decoder):
         self.errors=0
         self.vin='_________________'
 
+    # API function called to reset decoder state
+    def reset(self):
+        self.__init__
 
     # API function called before decoding
     def start(self):

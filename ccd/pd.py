@@ -76,6 +76,10 @@ class Decoder(srd.Decoder):
 
     # Object initialization
     def __init__(self):
+        self.reset()
+
+    # API function called to reset decoder state
+    def reset(self):
         self.samplerate = None
         self.samplenum = 0
         self.startsample = -1
@@ -91,10 +95,6 @@ class Decoder(srd.Decoder):
         self.waitfotime=-1
         self.errors=0
         self.vin='_________________'
-
-    # API function called to reset decoder state
-    def reset(self):
-        self.__init__
 
     # API function called before decoding
     def start(self):

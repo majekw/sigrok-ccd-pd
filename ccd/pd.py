@@ -351,14 +351,14 @@ class Decoder(srd.Decoder):
             # 6 bytes total
             # 0x0c, AA, BB, CC, DD, checksum
             # - battery voltage = AA/8 V
-            # - oil pressure = BB/32 ?
+            # - oil pressure = BB/2 psi or BB*3.4473785 kPa (center of gauge is about 300kPa/40psi)
             # - engine temperature = CC - 64 C
             # - battery temperature = DD -64 C
             voltage = str(self.ccd_message[1]/8)
-            oil = str(self.ccd_message[2]/32)
+            oil = str(round(self.ccd_message[2]*3.4473785))
             engtemp = str(self.ccd_message[3]-64)
             battemp = str(self.ccd_message[4]-64)
-            self.ccd_ann(['Engine temperature: '+engtemp+' C, battery temperature: '+battemp+' C, battery voltage: '+voltage +' V, oil pressure: '+oil,'EngTemp='+engtemp+',BatTemp='+battemp])
+            self.ccd_ann(['Engine temperature: '+engtemp+' C, battery temperature: '+battemp+' C, battery voltage: '+voltage +' V, oil pressure: '+oil+' kPa','EngTemp='+engtemp+',BatTemp='+battemp])
             
         elif self.ccd_message[0] == 0xda:
             # Instrument Cluster Lamp States (CHECK: new bits)
@@ -459,6 +459,11 @@ class Decoder(srd.Decoder):
         # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-?
         # 0x7E (126) - 1 param, 3 bytes, ???? HVAC, 0 - AC_REQUEST
         # 0x9D (157) - ? param, 4 bytes, ????
+        #  0x80
+        #   0x01 - memory 1
+        #   0x02 - memory 2
+        #   0x11 - set memory 1
+        #   0x12 - set memory 2
         # 0xAC (172) - 1 param, 4 bytes, Body type broadcast AN/DN, VEHICLE INFORMATION
         # 0xB1 (177) - 1 param, 3 bytes, WARNING
         # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE

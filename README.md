@@ -13,10 +13,11 @@ It's alive because:
 - Great datasheet for CDP68HC68S1
 - Some Chrysler's US patents (for example 4,706,082)
 - Great summary of everything in one place: http://www.cnblogs.com/shangdawei/p/3570499.html
-- Forum topic at: http://thespeedfreaks.net/showthread.php?12585-CCDuino-A-ZJ-Databus-Project/
+- Forum topic at: http://thespeedfreaks.net/showthread.php?12585-CCDuino-A-ZJ-Databus-Project/ (no longer available)
 - Another CCD project: https://chryslerccdsci.wordpress.com/
-- projects from https://github.com/xerootg/
+- Projects from https://github.com/xerootg/
 - Google Sheet with data: https://docs.google.com/spreadsheets/d/1-7Ahhgu7fPNAfORWXrjADwHnI8PiozMbrc1AF3RrglQ
+- Opendbc's dbc file for Jeep ZJ: https://github.com/csouers/opendbc/blob/master/1998_jeep_grand_cherokee_59limited.dbc
 
 and of course because of great extendable logic analyzer: https://sigrok.org/
 

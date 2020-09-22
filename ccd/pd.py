@@ -154,10 +154,28 @@ class Decoder(srd.Decoder):
             # (un)lock doors, alarm
             # CHECK THIS
             if self.ccd_message[1] == 128:
-                #message from DDM to PDM
-                self.ccd_ann(['DDM: ' + hex(self.ccd_message[2]),'DDM:' + hex(self.ccd_message[2])[2:],'DDM:' + hex(self.ccd_message[2])[2:]])
+                # message from DDM
+                # 0 - lock 3 doors on PDM (DDM switch)
+                # 3 - unlock 3 doors on PDM (DDM switch)
+                self.ccd_ann(['from DDM: ' + hex(self.ccd_message[2]),'DDM:' + hex(self.ccd_message[2])[2:],'DDM:' + hex(self.ccd_message[2])[2:]])
             elif self.ccd_message[1] == 129:
-                self.ccd_ann(['PDM: ' + hex(self.ccd_message[2]),'PDM:' + hex(self.ccd_message[2])[2:],'PDM:' + hex(self.ccd_message[2])[2:]])
+                # message from PDM
+                # 0x52 - unlock driver door, disarm alarm
+                # 0x54 - unlock all doors
+                # 0x49 - lock driver door, arm alarm
+                # 0x89 - lock driver door (RKE)
+                # 0x92 - unlock driver door (RKE)
+                # 0x01 - lock driver door (PDM switch)
+                # 0x04 - unlock driver door (PDM switch)
+                # 0 - lock driver door
+                # 1
+                # 2 - unlock driver door
+                # 3
+                # 4
+                # 5
+                # 6 - arm alarm
+                # 7 - RKE lock
+                self.ccd_ann(['from PDM: ' + hex(self.ccd_message[2]),'PDM:' + hex(self.ccd_message[2])[2:],'PDM:' + hex(self.ccd_message[2])[2:]])
             else:
                 self.ccd_ann(['unknown message from DDM/PDM: ' + hex(self.ccd_message[1]) + ' ' + hex(self.ccd_message[2]),'UNK DDM/PDM:' + hex(self.ccd_message[1])[2:]+ hex(self.ccd_message[2])[2:], 'UNK DDM/PDM:' + hex(self.ccd_message[1])[2:]+ hex(self.ccd_message[2])[2:]])
         
@@ -169,13 +187,13 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['TPS: ' + tps + ', CRUISE: '+cruise,'TPS:'+tps+',CRUISE:'+cruise])
             
         elif self.ccd_message[0] == 0x35:
-            # Ingition switch status bits
+            # Ingition switch status bits (CHECK: us/metric, seat belt!)
             # 4 bytes total
             # 0x35, AA, BB, checksum
             # bits:
             # AA:
             # 0 - interior lamps, 1=switched on
-            # 1 - always 1
+            # 1 - always 1? (metric)
             # 2 - key in accesory position
             # 3
             # 4 - key in run position
@@ -183,6 +201,7 @@ class Decoder(srd.Decoder):
             # 6
             # 7
             # BB: unknown (always 0x00 in my dumps)
+            # 1 - high beam?
             # 2 - engine warm?
             # CHECK THIS
             ign = self.ccd_message[1]
@@ -190,16 +209,16 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['Ignition switch: ' + ignstr, 'IGN:'+ignstr, 'IGN:'+ignstr])
 
         elif self.ccd_message[0] == 0xA4:
-            # Instrumental cluster lamps
+            # Instrumental cluster lamps (CHECK)
             # 4 bytes total
             # 0xa4, AA, BB, checksum
             # AA:
             # 0
-            # 1 - 1 if car is accelerating
+            # 1 - throttle applied
             # 2 - brake pressed
             # 3 - A/C compressor clutch (1 - idle, 0 - engaged)
             # 4 - overdrive clutch
-            # 5
+            # 5 - OD OFF ?
             # 6 - not in P or N
             # 7
             # BB: always 0x00?
@@ -208,8 +227,12 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['Instrumental cluster lamps: ' + lampsstr, 'LAMPS:'+lampsstr])
 
         elif self.ccd_message[0] == 0x8C:
-            # Temperatures
-            # not tested
+            # Temperatures (not tested)
+            # 4 bytes total
+            # 0xa4, AA, BB, checksum
+            # AA - engine temperature
+            # BB - depending on source it may be: ambient/battery/intake temperature
+            #
             engtemp = str(self.ccd_message[1]-128)
             battemp = str(self.ccd_message[2]-128)
             self.ccd_ann(['Engine temperature: '+engtemp+', battery temperature: '+battemp,'EngTemp='+engtemp+',BatTemp='+battemp])
@@ -236,11 +259,30 @@ class Decoder(srd.Decoder):
             # 5 bytes total
             # 0x82, AA, BB, CC, checksum
             # in my car always 0x20, 0x00, 0x00
+            # AA: always 0x20?
+            # BB:
+            # 0
+            # 1
+            # 2 - track up
+            # 3 - track down
+            # 4
+            # 5 - volume up
+            # 6 - volume down
+            # 7
+            # CC:
+            # 0 - album up
+            # 1
+            # 2
+            # 3
+            # 4
+            # 5
+            # 6
+            # 7
             volume=hex(self.ccd_message[1])[2:]+' '+hex(self.ccd_message[2])[2:]+' '+hex(self.ccd_message[3])[2:]
             self.ccd_ann(['Steering wheel volume buttons: '+volume, 'volume: '+volume])
             
         elif self.ccd_message[0] == 0x8E:
-            # Doors
+            # Doors (CHECK)
             # 3 bytes total
             # 0x8e, AA, checksum
             # 0 - Left Front (1=open)
@@ -250,7 +292,7 @@ class Decoder(srd.Decoder):
             # 4 - Liftgate
             # 5
             # 6
-            # 7 - set only during kick-start
+            # 7 - set only during kick-start (parking brake?)
             doors = self.ccd_message[1]
             doorsdec = ''
             doorsstr = "{0:08b}".format(doors)
@@ -319,17 +361,17 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['Engine temperature: '+engtemp+' C, battery temperature: '+battemp+' C, battery voltage: '+voltage +' V, oil pressure: '+oil,'EngTemp='+engtemp+',BatTemp='+battemp])
             
         elif self.ccd_message[0] == 0xda:
-            # check engine lamp
+            # Instrument Cluster Lamp States (CHECK: new bits)
             # 3 bytes total
             # 0xda, AA, checksum
             # AA:
             # 0 - always 0?
-            # 1 - always 0?
-            # 2 - always 0?
-            # 3 - always 0?
-            # 4 - always 0?
-            # 5 - always 1?
-            # 6 - check engine lamp (1=lit)
+            # 1 - always 0? (trip odo reset state: 1-yes)
+            # 2 - always 0? (trip odo reset switch: 1 closed)
+            # 3 - always 0? (beep request)
+            # 4 - always 0? (cluster alarm)
+            # 5 - always 1? (cluster type: 1-metric, 0-us)
+            # 6 - check engine lamp MIL (1=lit)
             # 7 - always 0?
             if self.ccd_message[1] & 0x40 == 0:
                 mil = 'OFF'
@@ -411,6 +453,19 @@ class Decoder(srd.Decoder):
 
             self.ccd_ann(['Windows:'+dmess+', mirrors:'+mmess])
 
+        # 0x23 (35)  - 1 param, 4 bytes, COUNTRY CODE
+        # 0x3A (58)  - 1 param, 4 bytes, INSTRUMENT CLUSTER LAMP STATES
+        # 0x44 (68)  - 1 param, 4 bytes, FUEL USED
+        # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-?
+        # 0x7E (126) - 1 param, 3 bytes, ???? HVAC, 0 - AC_REQUEST
+        # 0x9D (157) - ? param, 4 bytes, ????
+        # 0xAC (172) - 1 param, 4 bytes, Body type broadcast AN/DN, VEHICLE INFORMATION
+        # 0xB1 (177) - 1 param, 3 bytes, WARNING
+        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE
+        # 0xEC (236) - 1 param, 4 bytes, VEHICLE INFORMATION, Bit 7: N/A; Bit 6: IAT-sensor limp-in; Bit 5: N/A; Bit 4:2 Fuel type: 000: CNG; 001: NO LEAD; 010: LEADED FUEL; 011: FLEX FUEL; 100: DIESEL; Bit1: N/A; Bit 0: ECT-sensor limp in
+        # 0xF1 (241) - 1 param, 3 bytes, WARNING
+        # 0xF2 (242) - 1 param, 6 bytes, RESPONSE to B2 message
+        # 0xF5 (245) - ? param, 4 bytes, ENGINE LAMP CTRL
         else:
             # not decoded yet
             message=''

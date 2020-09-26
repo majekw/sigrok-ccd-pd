@@ -152,6 +152,12 @@ class Decoder(srd.Decoder):
 
         elif self.ccd_message[0] == 0x86:
             # (un)lock doors, alarm
+            # 4 bytes total
+            # 0x86, AA, BB, checksum
+            #  AA:
+            #     0x80 - message from DDM
+            #     0x81 - message from PDM
+            #  BB:
             # CHECK THIS
             if self.ccd_message[1] == 128:
                 # message from DDM
@@ -193,7 +199,7 @@ class Decoder(srd.Decoder):
             # bits:
             # AA:
             # 0 - interior lamps, 1=switched on
-            # 1 - always 1? (metric)
+            # 1 - US/METRIC STATUS (0- US, 1 - METRIC)
             # 2 - key in accesory position
             # 3
             # 4 - key in run position
@@ -270,7 +276,7 @@ class Decoder(srd.Decoder):
             # 6 - volume down
             # 7
             # CC:
-            # 0 - album up
+            # 0 - preset
             # 1
             # 2
             # 3
@@ -454,7 +460,25 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['Windows:'+dmess+', mirrors:'+mmess])
 
         # 0x23 (35)  - 1 param, 4 bytes, COUNTRY CODE
-        # 0x3A (58)  - 1 param, 4 bytes, INSTRUMENT CLUSTER LAMP STATES
+        #  0x00: USA
+        #   AA/BB??
+        #    0x01: GULF COAST
+        #    0x02: EUROPE
+        #    0x03: JAPAN
+        #    0x04: MALAYSIA
+        #    0x05: INDONESIA
+        #    0x06: AUSTRALIA
+        #    0x07: ENGLAND
+        #    0x08: VENEZUELA
+        #    0x09: CANADA
+        #    0x0A: UNKNOWN
+        # 0x3A (58)  - 1 param, 4 bytes, INSTRUMENT CLUSTER LAMP STATES (AIRBAG)
+        #  AA: 0x22, BB: ?
+        #  0x10 - AIRBAG (0 - single, 1 - dual)
+        #  0x80 - MIC SEATBELT LAMP ST (1 - on, 0 - off)
+        #  0x02 - MIC DRIVER STATE/MIC BULB STATE (1 - failed, 0 - ok)
+        #  0x01 - MIC DRIVER STATE/MIC BULB STATE (1 - failed, 0 - ok)
+        #  0x08 - ACM LAMP STATE (1- on, 0 - off) (ACM=Airbag Control Module)
         # 0x44 (68)  - 1 param, 4 bytes, FUEL USED
         # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-?
         # 0x7E (126) - 1 param, 3 bytes, ???? HVAC, 0 - AC_REQUEST
@@ -465,12 +489,42 @@ class Decoder(srd.Decoder):
         #   0x11 - set memory 1
         #   0x12 - set memory 2
         # 0xAC (172) - 1 param, 4 bytes, Body type broadcast AN/DN, VEHICLE INFORMATION
+        #  ?
         # 0xB1 (177) - 1 param, 3 bytes, WARNING
-        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE
-        # 0xEC (236) - 1 param, 4 bytes, VEHICLE INFORMATION, Bit 7: N/A; Bit 6: IAT-sensor limp-in; Bit 5: N/A; Bit 4:2 Fuel type: 000: CNG; 001: NO LEAD; 010: LEADED FUEL; 011: FLEX FUEL; 100: DIESEL; Bit1: N/A; Bit 0: ECT-sensor limp in
+        #  0x04 - EXTERIOR LAMP WARN (1 - on, 0 - off)
+        #  0x01 - KEY IN IGN WARN (1 - on, 0 - off)
+        #  0x10 - OVERSPEED WARNING (1 - on, 0 - off)
+        #  0x02 - SEAT BELT WARNING (1 - on, 0 - off)
+        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE, counting down, probably miles/km to service
+        #  AA*65536+BB*256+CC (units? /3712 km?)
+        # 0xEC (236) - 1 param, 4 bytes, VEHICLE INFORMATION
+        #  AA: 0x00
+        #  BB:
+        #   Bit 7: N/A (always 1?)
+        #   Bit 6: IAT-sensor limp-in (Intake Air Sensor)
+        #   Bit 5: N/A (always 1?)
+        #   Bit 4:2 Fuel type:
+        #    000: CNG
+        #    001: NO LEAD
+        #    010: LEADED FUEL
+        #    011: FLEX FUEL
+        #    100: DIESEL
+        #   Bit1: N/A (always 1?)
+        #   Bit 0: ECT-sensor limp in (Coolant Temperature Sensor)
         # 0xF1 (241) - 1 param, 3 bytes, WARNING
+        #  0x10 - BRAKE PRESS WARNING
+        #  0x08 - CRITICAL TEMP WARNING
+        #  0x04 - HI TEMP WARNING
+        #  0x01 - LOW FUEL WARNING
+        #  0x0x - LOW OIL WARNING
         # 0xF2 (242) - 1 param, 6 bytes, RESPONSE to B2 message
         # 0xF5 (245) - ? param, 4 bytes, ENGINE LAMP CTRL
+        #  AA:
+        #   0x00: OFF
+        #   0x01: ON
+        #   0x02: WASH ON
+        #   0x03: ON/BLINK
+        #  BB: 0x00
         else:
             # not decoded yet
             message=''

@@ -46,8 +46,8 @@ class Decoder(srd.Decoder):
         {'id': 'bus', 'name': 'bus', 'desc': 'CCD bidirectional shared data bus'},
     )
     options = (
-	{'id': 'ignoreerrors', 'desc': "Ignore checksum and frame errors", 'default': 'no',
-	    'values': ('yes', 'no')},
+        {'id': 'ignoreerrors', 'desc': "Ignore checksum and frame errors", 'default': 'no',
+            'values': ('yes', 'no')},
         {'id': 'format', 'desc': 'Data format', 'default': 'hex',
             'values': ('ascii', 'dec', 'hex', 'oct', 'bin')},
         {'id': 'invert_bus', 'desc': 'Invert bus?', 'default': 'no',
@@ -72,7 +72,7 @@ class Decoder(srd.Decoder):
     #    ('message', 'CCD dump'),
     #)
     # end of api keys
-    
+
 
     # Object initialization
     def __init__(self):
@@ -117,11 +117,11 @@ class Decoder(srd.Decoder):
     # emit annotation in CCD decoded bus row
     def ccd_ann(self,annotation):
         self.put(self.busystart, self.samplenum-1, self.out_ann, [5, annotation ])
-    
+
 
     # real stuff here
     def decode_ccd_message(self):
-        
+
         if self.ccd_message[0] == 0x24:
             # speed
             # 4 bytes total
@@ -186,14 +186,14 @@ class Decoder(srd.Decoder):
                 self.ccd_ann(['from PDM: ' + hex(self.ccd_message[2]),'PDM:' + hex(self.ccd_message[2])[2:],'PDM:' + hex(self.ccd_message[2])[2:]])
             else:
                 self.ccd_ann(['unknown message from DDM/PDM: ' + hex(self.ccd_message[1]) + ' ' + hex(self.ccd_message[2]),'UNK DDM/PDM:' + hex(self.ccd_message[1])[2:]+ hex(self.ccd_message[2])[2:], 'UNK DDM/PDM:' + hex(self.ccd_message[1])[2:]+ hex(self.ccd_message[2])[2:]])
-        
+
         elif self.ccd_message[0] == 0x42:
             # TPS/Cruise
             # not tested
             tps = str(self.ccd_message[1])
             cruise = str(self.ccd_message[2])
             self.ccd_ann(['TPS: ' + tps + ', CRUISE: '+cruise,'TPS:'+tps+',CRUISE:'+cruise])
-            
+
         elif self.ccd_message[0] == 0x35:
             # Ingition switch status bits (CHECK: us/metric, seat belt!)
             # 4 bytes total
@@ -244,7 +244,7 @@ class Decoder(srd.Decoder):
             engtemp = str(self.ccd_message[1]-128)
             battemp = str(self.ccd_message[2]-128)
             self.ccd_ann(['Engine temperature: '+engtemp+', battery temperature: '+battemp,'EngTemp='+engtemp+',BatTemp='+battemp])
-        
+
         elif self.ccd_message[0] == 0x84:
             # Increment odometer
             # resoluton 0.000125 mi/bit? ~20cm?
@@ -261,7 +261,7 @@ class Decoder(srd.Decoder):
             ambientf=str(self.ccd_message[1]-70)
             ambientc=str(floor((self.ccd_message[1]-70-32)*5/9))
             self.ccd_ann(['Ambient temperature: '+ambientf+' F ('+ambientc+' C)','AmbTemp:'+ambientf])
-        
+
         elif self.ccd_message[0] == 0x82:
             # Steering wheel keys for radio
             # 5 bytes total
@@ -288,7 +288,7 @@ class Decoder(srd.Decoder):
             # 7
             volume=hex(self.ccd_message[1])[2:]+' '+hex(self.ccd_message[2])[2:]+' '+hex(self.ccd_message[3])[2:]
             self.ccd_ann(['Steering wheel volume buttons: '+volume, 'volume: '+volume])
-            
+
         elif self.ccd_message[0] == 0x8E:
             # Doors (CHECK)
             # 3 bytes total
@@ -317,7 +317,7 @@ class Decoder(srd.Decoder):
             if doors & 0xe0:
                 doorsdec += ' unknown:'+doorsstr
             self.ccd_ann(['Doors:' + doorsdec])
-        
+
         elif self.ccd_message[0] == 0xFE:
             # PWM pannel lamp dim
             # 3 bytes total
@@ -333,7 +333,7 @@ class Decoder(srd.Decoder):
             # distance = 0xAABBCC/4971 km
             trip = round(((65536*self.ccd_message[1]+256*self.ccd_message[2]+self.ccd_message[3])*128)/4971,1)
             self.ccd_ann(['Trip distance: ' + str(trip) + ' km'])
-            
+
         elif self.ccd_message[0] == 0x50:
             # airbag lamp
             # 3 bytes total
@@ -367,7 +367,7 @@ class Decoder(srd.Decoder):
             engtemp = str(self.ccd_message[3]-64)
             battemp = str(self.ccd_message[4]-64)
             self.ccd_ann(['Engine temperature: '+engtemp+' C, battery temperature: '+battemp+' C, battery voltage: '+voltage +' V, oil pressure: '+oil+' kPa','EngTemp='+engtemp+',BatTemp='+battemp])
-            
+
         elif self.ccd_message[0] == 0xda:
             # Instrument Cluster Lamp States (CHECK: new bits)
             # 3 bytes total
@@ -386,7 +386,7 @@ class Decoder(srd.Decoder):
             else:
                 mil = 'PROBLEM'
             self.ccd_ann(['Check engine lamp: ' + mil])
-            
+
         elif self.ccd_message[0] == 0xCE:
             # Odometer
             # 6 bytes total
@@ -394,7 +394,7 @@ class Decoder(srd.Decoder):
             # odo = 0xAABBCCDD / 4971 km
             odo = (16777216*self.ccd_message[1]+65536*self.ccd_message[2]+256*self.ccd_message[3]+self.ccd_message[4])//4971
             self.ccd_ann(['Odo: ' + str(odo) + ' km'])
-            
+
         elif self.ccd_message[0] == 0x62:
             # electric doors/mirrors
             # 4 bytes total
@@ -418,7 +418,7 @@ class Decoder(srd.Decoder):
             # 5 - right mirror down
             # 6 - right mirror left
             # 7 - right mirror right
-            
+
             # windows
             dmess=''
             if self.ccd_message[1] & 0x01 == 0:
@@ -537,28 +537,28 @@ class Decoder(srd.Decoder):
 
     # Main decode function called by API
     def decode(self):
-	# check if samplerate is set
+        # check if samplerate is set
         if not self.samplerate:
             raise SamplerateError('Cannot decode without samplerate.')
-        
+
         # iterate through sample data (samplenum, channels)
         while True:
 
             pins = self.wait([{0: 'e'}, self.waituart, self.waitidle])
             bus = int.from_bytes(pins, byteorder='little')
 
-	    # invert input if requested
+            # invert input if requested
             if self.options['invert_bus'] == 'yes':
                 bus = 1-bus
-            
+
             # IDLE handling
             if self.oldbus != bus:
-        	# bus changed
+                # bus changed
                 if self.idle == 'BUSY':
                     # for busy only update idlestart
                     self.idlestart = self.samplenum
                 else:
-        	    # for idle: emit annotation and change state
+                    # for idle: emit annotation and change state
                     self.put(self.idlestart, self.samplenum-1, self.out_ann, [2, ['Idle', 'Id', 'I']])
                     self.idle = 'BUSY'
                     self.idlestart = self.samplenum
@@ -566,15 +566,15 @@ class Decoder(srd.Decoder):
                 # after every change wait for 10 bits to change from BUSY to IDLE
                 self.waitidle = { 'skip': self.bit_width*10 }
             else:
-        	# bus not changed
+                # bus not changed
                 if self.idle == 'BUSY' and bus and self.samplenum-self.idlestart > self.bit_width*10:
-        	    # idle for more than 10 bits - change state
+                    # idle for more than 10 bits - change state
                     self.put(self.busystart, self.samplenum-1, self.out_ann, [2, ['Busy', 'Bsy', 'B']])
                     self.idle = 'IDLE'
                     self.idlestart = self.samplenum
-                    
+
                     # BUSY ended, time to decode collected bytes
-                    
+
                     # check message checksum
                     chksum = 0
                     for byte in self.ccd_message:
@@ -585,7 +585,7 @@ class Decoder(srd.Decoder):
                         # emit annotation for bad checksum
                         self.put(self.busystart, self.samplenum-1, self.out_ann, [4, ['Checksum error', 'Bad sum', 'CHK']])
                         self.errors += 1
-                        
+
                     if self.errors == 0 or self.options['ignoreerrors'] == 'yes':
                         # process frame only if no errors
                         self.decode_ccd_message()
@@ -620,7 +620,7 @@ class Decoder(srd.Decoder):
                     self.put(self.samplenum, self.samplenum+self.bit_width-1, self.out_ann, [0, ['Start bit', 'Start', 'S']])
                 else:
                     self.waituart = { 0: 'e' }
-                    
+
             elif self.state == 'GET DATA BITS':
                 if self.samplenum >= self.waitfortime:
                     # calculate new byte value
@@ -658,6 +658,6 @@ class Decoder(srd.Decoder):
                     self.waituart = { 0: 'e' }
                 else:
                     self.waituart = { 'skip': self.waitfortime-self.samplenum }
-                    
-    	    # update old status
+
+            # update old status
             self.oldbus = bus

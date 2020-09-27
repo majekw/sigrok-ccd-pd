@@ -596,6 +596,9 @@ class Decoder(srd.Decoder):
 
                     # on IDLE wait for next edge
                     self.waitidle = { 0: 'e' }
+                elif self.idle == 'IDLE':
+                    # nothing changed, still idle, so wait for nearest edge
+                    self.waitidle = { 0: 'e' }
                 else:
                     # not the end of idle, wait to end of idle time
                     dif=self.bit_width*10-(self.samplenum-self.idlestart)

@@ -55,18 +55,20 @@ class Decoder(srd.Decoder):
     )
     annotations = (
         ('bus-bits', 'Bus data bits'),
-        ('bus', 'Bus data'),
+        ('bus-bytes', 'Bus data bytes'),
         ('idle', 'Bus idle'),
         ('frame-error', 'Frame errors'),
         ('checksum', 'Message checksum errors'),
         ('bus-decoded','Decoded bus message'),
+        ('bus-message','Message bytes'),
     )
     annotation_rows = (
         ('bus-bits', 'Bus bits', (0,)),
         ('idle', 'Idle', (2,)),
         ('bus-warnings', 'Bus warnings', (3,4)),
-        ('bus-data', 'Bus', (1,)),
-        ('bus-decoded', 'BUS', (5,)),
+        ('bus-data', 'Bus bytes', (1,)),
+        ('bus-message', 'Message bytes', (6,)),
+        ('bus-decoded', 'BUS decoded', (5,)),
     )
     #binary = (
     #    ('message', 'CCD dump'),
@@ -210,7 +212,7 @@ class Decoder(srd.Decoder):
             # 7
             # BB: unknown (always 0x00 in my dumps)
             # 1 - high beam?
-            # 2 - engine warm?
+            # 2 - engine warm? (>30 C)
             # CHECK THIS
             ign = self.ccd_message[1]
             ignstr = "{0:08b}".format(ign) + ' '+str(self.ccd_message[2])
@@ -385,7 +387,7 @@ class Decoder(srd.Decoder):
                 mil = 'OFF'
             else:
                 mil = 'PROBLEM'
-            self.ccd_ann(['Check engine lamp: ' + mil])
+            self.ccd_ann(['Check engine lamp: ' + mil + ' ('+hex(self.ccd_message[1]) + ')'])
 
         elif self.ccd_message[0] == 0xCE:
             # Odometer
@@ -483,21 +485,36 @@ class Decoder(srd.Decoder):
         #  0x08 - ACM LAMP STATE (1- on, 0 - off) (ACM=Airbag Control Module)
         # 0x44 (68)  - 1 param, 4 bytes, FUEL USED
         # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-?
-        # 0x7E (126) - 1 param, 3 bytes, ???? HVAC, 0 - AC_REQUEST
-        # 0x9D (157) - ? param, 4 bytes, ????
+        # 0x66 - 3 bytes ????
+        #  0x10
+        # 0x7E (126) - 1 param, 3 bytes, ???? HVAC, 0 - AC_REQUEST (CHECK)
+        #  0x00
+        #  0x01
+        # 0x9A - 3 bytes (overhead console???) (CHECK)
+        #  0xa5 - switch to imperial
+        #  0x25 - switch to metric
+        #  0x80
+        #  0x81
+        #  0x82
+        #  0x83
+        #  0x84
+        #  0x85
+        #  0x87
+        # 0x9D (157) - ? param, 4 bytes, ???? (CHECK)
         #  0x80
         #   0x01 - memory 1
         #   0x02 - memory 2
         #   0x11 - set memory 1
         #   0x12 - set memory 2
+        #   0x81 - ?
         # 0xAC (172) - 1 param, 4 bytes, Body type broadcast AN/DN, VEHICLE INFORMATION
-        #  ?
-        # 0xB1 (177) - 1 param, 3 bytes, WARNING
-        #  0x04 - EXTERIOR LAMP WARN (1 - on, 0 - off)
+        #  ? ac 08 a2
+        # 0xB1 (177) - 1 param, 3 bytes, WARNING (CHECK)
         #  0x01 - KEY IN IGN WARN (1 - on, 0 - off)
-        #  0x10 - OVERSPEED WARNING (1 - on, 0 - off)
         #  0x02 - SEAT BELT WARNING (1 - on, 0 - off)
-        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE, counting down, probably miles/km to service
+        #  0x04 - EXTERIOR LAMP WARN (1 - on, 0 - off)
+        #  0x10 - OVERSPEED WARNING (1 - on, 0 - off)
+        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE, counting down, probably miles/km to service (CHECK)
         #  AA*65536+BB*256+CC (units? /3712 km?)
         # 0xEC (236) - 1 param, 4 bytes, VEHICLE INFORMATION
         #  AA: 0x00
@@ -517,7 +534,7 @@ class Decoder(srd.Decoder):
         #  0x10 - BRAKE PRESS WARNING
         #  0x08 - CRITICAL TEMP WARNING
         #  0x04 - HI TEMP WARNING
-        #  0x01 - LOW FUEL WARNING
+        #  0x01 - LOW FUEL WARNING (<13%)
         #  0x0x - LOW OIL WARNING
         # 0xF2 (242) - 1 param, 6 bytes, RESPONSE to B2 message
         # 0xF5 (245) - ? param, 4 bytes, ENGINE LAMP CTRL
@@ -533,6 +550,13 @@ class Decoder(srd.Decoder):
             for byte in self.ccd_message:
                 message += hex(byte)[2:] + ' '
             self.ccd_ann(['Unknown CCD message: '+message, 'CCD: '+message , message])
+
+        # log whole message
+        message=''
+        for byte in self.ccd_message:
+            message += hex(byte)[2:] + ' '
+        self.put(self.busystart, self.samplenum-1, self.out_ann, [6, [message] ])
+
 
 
     # Main decode function called by API

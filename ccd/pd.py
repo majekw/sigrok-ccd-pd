@@ -85,16 +85,18 @@ class Decoder(srd.Decoder):
         self.startsample = -1
         self.state = 'WAIT FOR START BIT'
         self.idle = 'IDLE'
-        self.idletime = -1
+        self.idlestart = -1
         self.busystart = -1
         self.oldbus = 1
         self.ccd_message = []
-        self.databit=0
-        self.databyte=0
-        self.framestart=-1
-        self.waitfotime=-1
-        self.errors=0
-        self.vin='_________________'
+        self.databit = 0
+        self.databyte = 0
+        self.framestart = -1
+        self.waitfotime = -1
+        self.waituart = { 'skip': 1 }
+        self.waitidle = { 'skip': 1 }
+        self.errors = 0
+        self.vin = '_________________'
 
     # API function called before decoding
     def start(self):
@@ -542,7 +544,7 @@ class Decoder(srd.Decoder):
         # iterate through sample data (samplenum, channels)
         while True:
 
-            pins = self.wait()
+            pins = self.wait([{0: 'e'}, self.waituart, self.waitidle])
             bus = int.from_bytes(pins, byteorder='little')
 
 	    # invert input if requested
@@ -553,21 +555,23 @@ class Decoder(srd.Decoder):
             if self.oldbus != bus:
         	# bus changed
                 if self.idle == 'BUSY':
-        	    # for busy only update idletime
-                    self.idletime = self.samplenum
+                    # for busy only update idlestart
+                    self.idlestart = self.samplenum
                 else:
         	    # for idle: emit annotation and change state
-                    self.put(self.idletime, self.samplenum-1, self.out_ann, [2, ['Idle', 'Id', 'I']])
+                    self.put(self.idlestart, self.samplenum-1, self.out_ann, [2, ['Idle', 'Id', 'I']])
                     self.idle = 'BUSY'
-                    self.idletime = self.samplenum
+                    self.idlestart = self.samplenum
                     self.busystart = self.samplenum
+                # after every change wait for 10 bits to change from BUSY to IDLE
+                self.waitidle = { 'skip': self.bit_width*10 }
             else:
         	# bus not changed
-                if self.idle == 'BUSY' and bus and self.samplenum-self.idletime > self.bit_width*10:
+                if self.idle == 'BUSY' and bus and self.samplenum-self.idlestart > self.bit_width*10:
         	    # idle for more than 10 bits - change state
                     self.put(self.busystart, self.samplenum-1, self.out_ann, [2, ['Busy', 'Bsy', 'B']])
                     self.idle = 'IDLE'
-                    self.idletime = self.samplenum
+                    self.idlestart = self.samplenum
                     
                     # BUSY ended, time to decode collected bytes
                     
@@ -590,6 +594,15 @@ class Decoder(srd.Decoder):
                     self.ccd_message = []
                     self.errors = 0
 
+                    # on IDLE wait for next edge
+                    self.waitidle = { 0: 'e' }
+                else:
+                    # not the end of idle, wait to end of idle time
+                    dif=self.bit_width*10-(self.samplenum-self.idlestart)
+                    if dif < 1:
+                        dif = 1
+                    self.waitidle = { 'skip': dif }
+
 
             # serial protocol handling
             if self.state == 'WAIT FOR START BIT':
@@ -600,10 +613,13 @@ class Decoder(srd.Decoder):
                     self.framestart = self.samplenum
                     # set next sampling point
                     self.waitfortime = self.samplenum+ceil(1.5*self.bit_width)
+                    self.waituart = { 'skip': ceil(1.5*self.bit_width) }
                     # change state
                     self.state = 'GET DATA BITS'
                     # emit annotation
                     self.put(self.samplenum, self.samplenum+self.bit_width-1, self.out_ann, [0, ['Start bit', 'Start', 'S']])
+                else:
+                    self.waituart = { 0: 'e' }
                     
             elif self.state == 'GET DATA BITS':
                 if self.samplenum >= self.waitfortime:
@@ -615,6 +631,7 @@ class Decoder(srd.Decoder):
                     self.put(self.samplenum-ceil(self.bit_width/2), self.samplenum+floor(self.bit_width/2)-1, self.out_ann, [0, [str(bus), str(bus), str(bus)]])
                     # set next sample point
                     self.waitfortime = self.samplenum+self.bit_width
+                    self.waituart = { 'skip': self.bit_width }
                     # next bit
                     self.databit += 1
                     if self.databit == 8:
@@ -624,6 +641,8 @@ class Decoder(srd.Decoder):
                         self.state = 'GET STOP BIT'
                         # emit byte to annotation
                         self.put(self.framestart+self.bit_width, self.samplenum+floor(self.bit_width/2), self.out_ann, [1, [hex(self.databyte), hex(self.databyte)[2:], hex(self.databyte)[2:] ]])
+                else:
+                    self.waituart = { 'skip': self.waitfortime-self.samplenum }
             elif self.state == 'GET STOP BIT':
                 if self.samplenum >= self.waitfortime:
                     if not bus:
@@ -635,7 +654,10 @@ class Decoder(srd.Decoder):
                     # change next state
                     self.state = 'WAIT FOR START BIT'
                     # extend idle (a must for bytes like 0xff)
-                    self.idletime = self.samplenum
+                    self.idlestart = self.samplenum
+                    self.waituart = { 0: 'e' }
+                else:
+                    self.waituart = { 'skip': self.waitfortime-self.samplenum }
                     
     	    # update old status
             self.oldbus = bus

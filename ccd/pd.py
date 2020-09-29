@@ -48,10 +48,10 @@ class Decoder(srd.Decoder):
     options = (
         {'id': 'ignoreerrors', 'desc': "Ignore checksum and frame errors", 'default': 'no',
             'values': ('yes', 'no')},
-        {'id': 'format', 'desc': 'Data format', 'default': 'hex',
-            'values': ('ascii', 'dec', 'hex', 'oct', 'bin')},
         {'id': 'invert_bus', 'desc': 'Invert bus?', 'default': 'no',
             'values': ('yes', 'no')},
+        {'id': 'units', 'desc': 'Show metric/imperial/both/native units', 'default': 'native',
+            'values': ('metric', 'imperial', 'both', 'native')},
     )
     annotations = (
         ('bus-bits', 'Bus data bits'),
@@ -197,29 +197,26 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['TPS: ' + tps + ', CRUISE: '+cruise,'TPS:'+tps+',CRUISE:'+cruise])
 
         elif self.ccd_message[0] == 0x35:
-            # Ingition switch status bits (CHECK: us/metric, seat belt!)
+            # Ingition switch status bits
             # 4 bytes total
             # 0x35, AA, BB, checksum
-            # bits:
+            # bits (unused=0):
             # AA:
             # 0 - interior lamps, 1=switched on
             # 1 - US/METRIC STATUS (0- US, 1 - METRIC)
             # 2 - key in accesory position
-            # 3
             # 4 - key in run position
             # 5 - key in start position
-            # 6
-            # 7
-            # BB: unknown (always 0x00 in my dumps)
-            # 1 - high beam?
-            # 2 - engine warm? (>30 C)
+            # BB:
+            # 1 - high beam
+            # 2 - seat belt (1 - fastened)
             # CHECK THIS
             ign = self.ccd_message[1]
             ignstr = "{0:08b}".format(ign) + ' '+str(self.ccd_message[2])
             self.ccd_ann(['Ignition switch: ' + ignstr, 'IGN:'+ignstr, 'IGN:'+ignstr])
 
         elif self.ccd_message[0] == 0xA4:
-            # Instrumental cluster lamps (CHECK)
+            # Instrumental cluster lamps
             # 4 bytes total
             # 0xa4, AA, BB, checksum
             # AA:
@@ -228,7 +225,7 @@ class Decoder(srd.Decoder):
             # 2 - brake pressed
             # 3 - A/C compressor clutch (1 - idle, 0 - engaged)
             # 4 - overdrive clutch
-            # 5 - OD OFF ?
+            # 5 - OD OFF
             # 6 - not in P or N
             # 7
             # BB: always 0x00?
@@ -292,7 +289,7 @@ class Decoder(srd.Decoder):
             self.ccd_ann(['Steering wheel volume buttons: '+volume, 'volume: '+volume])
 
         elif self.ccd_message[0] == 0x8E:
-            # Doors (CHECK)
+            # Doors
             # 3 bytes total
             # 0x8e, AA, checksum
             # 0 - Left Front (1=open)
@@ -302,7 +299,7 @@ class Decoder(srd.Decoder):
             # 4 - Liftgate
             # 5
             # 6
-            # 7 - set only during kick-start (parking brake?)
+            # 7 - parking brake
             doors = self.ccd_message[1]
             doorsdec = ''
             doorsstr = "{0:08b}".format(doors)
@@ -332,7 +329,7 @@ class Decoder(srd.Decoder):
             # trip distance
             # 5 bytes total
             # 0xee, AA, BB, CC, checksum
-            # distance = 0xAABBCC/4971 km
+            # distance = 0xAABBCC/4971 km (or /8000 miles)
             trip = round(((65536*self.ccd_message[1]+256*self.ccd_message[2]+self.ccd_message[3])*128)/4971,1)
             self.ccd_ann(['Trip distance: ' + str(trip) + ' km'])
 
@@ -393,7 +390,7 @@ class Decoder(srd.Decoder):
             # Odometer
             # 6 bytes total
             # 0xce, AA, BB, CC, DD, checksum
-            # odo = 0xAABBCCDD / 4971 km
+            # odo = 0xAABBCCDD / 4971 km (or /8000 miles)
             odo = (16777216*self.ccd_message[1]+65536*self.ccd_message[2]+256*self.ccd_message[3]+self.ccd_message[4])//4971
             self.ccd_ann(['Odo: ' + str(odo) + ' km'])
 
@@ -477,29 +474,34 @@ class Decoder(srd.Decoder):
         #    0x09: CANADA
         #    0x0A: UNKNOWN
         # 0x3A (58)  - 1 param, 4 bytes, INSTRUMENT CLUSTER LAMP STATES (AIRBAG)
-        #  AA: 0x22, BB: ?
+        #  AA: 0x22, BB: 0
         #  0x10 - AIRBAG (0 - single, 1 - dual)
         #  0x80 - MIC SEATBELT LAMP ST (1 - on, 0 - off)
         #  0x02 - MIC DRIVER STATE/MIC BULB STATE (1 - failed, 0 - ok)
         #  0x01 - MIC DRIVER STATE/MIC BULB STATE (1 - failed, 0 - ok)
         #  0x08 - ACM LAMP STATE (1- on, 0 - off) (ACM=Airbag Control Module)
         # 0x44 (68)  - 1 param, 4 bytes, FUEL USED
-        # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-?
+        # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-? (CHECK)
+        #  AA:
+        #   0xe2 - P or N
+        #   0xe0 - R, D, 1, 2
+        #  BB: 0xff
+        #  CC: 0x01
         # 0x66 - 3 bytes ????
         #  0x10
-        # 0x7E (126) - 1 param, 3 bytes, ???? HVAC, 0 - AC_REQUEST (CHECK)
-        #  0x00
-        #  0x01
-        # 0x9A - 3 bytes (overhead console???) (CHECK)
+        # 0x7E (126) - 1 param, 3 bytes, HVAC, 0 - AC_REQUEST
+        #  0x00 - compressor off
+        #  0x01 - engage A/C compressor
+        # 0x9A - 3 bytes (overhead console)
         #  0xa5 - switch to imperial
         #  0x25 - switch to metric
-        #  0x80
-        #  0x81
-        #  0x82
-        #  0x83
-        #  0x84
-        #  0x85
-        #  0x87
+        #  0x80 - show odo since reset
+        #  0x81 - show avg fuel economy
+        #  0x82 - show current fuel economy
+        #  0x83 - show dte (distance to empty)
+        #  0x84 - show et (estimated time)
+        #  0x85 - show temp/compass
+        #  0x87 - switch off
         # 0x9D (157) - ? param, 4 bytes, ???? (CHECK)
         #  0x80
         #   0x01 - memory 1
@@ -509,13 +511,13 @@ class Decoder(srd.Decoder):
         #   0x81 - ?
         # 0xAC (172) - 1 param, 4 bytes, Body type broadcast AN/DN, VEHICLE INFORMATION
         #  ? ac 08 a2
-        # 0xB1 (177) - 1 param, 3 bytes, WARNING (CHECK)
+        # 0xB1 (177) - 1 param, 3 bytes, WARNING
         #  0x01 - KEY IN IGN WARN (1 - on, 0 - off)
         #  0x02 - SEAT BELT WARNING (1 - on, 0 - off)
         #  0x04 - EXTERIOR LAMP WARN (1 - on, 0 - off)
         #  0x10 - OVERSPEED WARNING (1 - on, 0 - off)
-        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE, counting down, probably miles/km to service (CHECK)
-        #  AA*65536+BB*256+CC (units? /3712 km?)
+        # 0xCC (204) - ? param, 4 bytes, ACCUMULATED MILEAGE, counting sometimes down (CHECK)
+        #  AA*256+BB (units?)
         # 0xEC (236) - 1 param, 4 bytes, VEHICLE INFORMATION
         #  AA: 0x00
         #  BB:
@@ -531,7 +533,7 @@ class Decoder(srd.Decoder):
         #   Bit1: N/A (always 1?)
         #   Bit 0: ECT-sensor limp in (Coolant Temperature Sensor)
         # 0xF1 (241) - 1 param, 3 bytes, WARNING
-        #  0x10 - BRAKE PRESS WARNING
+        #  0x10 - BRAKE PRESS WARNING (parking brake lamp lit on instrumental cluster)
         #  0x08 - CRITICAL TEMP WARNING
         #  0x04 - HI TEMP WARNING
         #  0x01 - LOW FUEL WARNING (<13%)

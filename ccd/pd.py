@@ -42,6 +42,7 @@ class Decoder(srd.Decoder):
     license = 'gplv2+'
     inputs = ['logic']
     outputs = ['ccd']
+    tags = ['Automotive']
     channels = (
         {'id': 'bus', 'name': 'bus', 'desc': 'CCD bidirectional shared data bus'},
     )
@@ -63,12 +64,12 @@ class Decoder(srd.Decoder):
         ('bus-message','Message bytes'),
     )
     annotation_rows = (
-        ('bus-bits', 'Bus bits', (0,)),
-        ('idle', 'Idle', (2,)),
-        ('bus-warnings', 'Bus warnings', (3,4)),
-        ('bus-data', 'Bus bytes', (1,)),
-        ('bus-message', 'Message bytes', (6,)),
-        ('bus-decoded', 'BUS decoded', (5,)),
+        ('a-bus-bits', 'Bus bits', (0,)),
+        ('a-idle', 'Idle', (2,)),
+        ('a-bus-warnings', 'Bus warnings', (3,4)),
+        ('a-bus-data', 'Bus bytes', (1,)),
+        ('a-bus-message', 'Message bytes', (6,)),
+        ('a-bus-decoded', 'Message decoded', (5,)),
     )
     #binary = (
     #    ('message', 'CCD dump'),
@@ -480,6 +481,7 @@ class Decoder(srd.Decoder):
         #  0x02 - MIC DRIVER STATE/MIC BULB STATE (1 - failed, 0 - ok)
         #  0x01 - MIC DRIVER STATE/MIC BULB STATE (1 - failed, 0 - ok)
         #  0x08 - ACM LAMP STATE (1- on, 0 - off) (ACM=Airbag Control Module)
+        #  0x22 - ??
         # 0x44 (68)  - 1 param, 4 bytes, FUEL USED
         # 0x64 (100) - ? param, 5 bytes, ???? TRANS, 0-?, 1-PARK_NEUTRAL,2-?,15-?,23-? (CHECK)
         #  AA:
@@ -488,27 +490,53 @@ class Decoder(srd.Decoder):
         #  BB: 0xff
         #  CC: 0x01
         # 0x66 - 3 bytes ????
-        #  0x10
+        #  0x08 - VIC service reset?
+        #  0x10 - almost everytime
         # 0x7E (126) - 1 param, 3 bytes, HVAC, 0 - AC_REQUEST
         #  0x00 - compressor off
         #  0x01 - engage A/C compressor
         # 0x9A - 3 bytes (overhead console)
-        #  0xa5 - switch to imperial
-        #  0x25 - switch to metric
-        #  0x80 - show odo since reset
-        #  0x81 - show avg fuel economy
-        #  0x82 - show current fuel economy
-        #  0x83 - show dte (distance to empty)
-        #  0x84 - show et (estimated time)
-        #  0x85 - show temp/compass
-        #  0x87 - switch off
+        #  bits:
+        #   0-3 - display screen showing:
+        #         000 0 - ODO, odo since reset
+        #         001 1 - AVG ECO, avg fuel economy
+        #         010 2 - ECO, current fuel economy
+        #         011 3 - DTE, distance to empty
+        #         100 4 - ET, estimated/empty time
+        #         101 5 - temperature/compass
+        #         111 7 - blank
+        #   4 - 0
+        #   5 - US/M switch pressed
+        #   6 - RESET pressed (US/M+STEP)
+        #   7 - metric=1/imperial=0 last status
+        #
+        #  0xa5 10100101 - switch to imperial
+        #  0x25 00100101 - switch to metric
+        #  0x80 10000000- show odo since reset
+        #  0x81 10000001 - show avg fuel economy
+        #  0x82 10000010 - show current fuel economy
+        #  0x83 10000011 - show dte (distance to empty)
+        #  0x84 10000100 - show et (estimated time)
+        #  0x85 10000101 - show temp/compass
+        #  0x87 10000111 - switch off
+        #  0xC0 11000000 - reset
+        #  0x20 00100000 - ??? to metric
+        #  0xA0 10100000 - ??? to imperial
+        #  0x01 00000001 - ???
+        #  0x03 00000011 - ???
+        #  0x07 00000111 - ???
+        #  0x05 00000101 - ???
+        #  0x00 00000000 - ???
+        #  0x21 00100001 - ??? - to metric
+        #  0xC1 11000001 - ??? - reset?
+
         # 0x9D (157) - ? param, 4 bytes, ???? (CHECK)
         #  0x80
         #   0x01 - memory 1
         #   0x02 - memory 2
         #   0x11 - set memory 1
         #   0x12 - set memory 2
-        #   0x81 - ?
+        #  0x81 - ?
         # 0xAC (172) - 1 param, 4 bytes, Body type broadcast AN/DN, VEHICLE INFORMATION
         #  ? ac 08 a2
         # 0xB1 (177) - 1 param, 3 bytes, WARNING

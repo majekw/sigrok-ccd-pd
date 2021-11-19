@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2017-2020 Marek Wodzinski <majek@w7i.pl>
+## Copyright (C) 2017-2021 Marek Wodzinski <majek@w7i.pl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -323,7 +323,7 @@ class Decoder(srd.Decoder):
             # 3 bytes total
             # 0xfe, AA, checksum
             # AA - pwm value (0-255)
-            pwm = floor(self.ccd_message[1]/2.56)
+            pwm = floor(self.ccd_message[1]/2.55)
             self.ccd_ann(['Pannel lamp dim: ' + str(pwm) + '%'])
 
         elif self.ccd_message[0] == 0xEE:
@@ -351,7 +351,7 @@ class Decoder(srd.Decoder):
             # 3 bytes total
             # 0x25, AA, checksum
             # fuel level = AA (0-255 scale)
-            pwm = floor(self.ccd_message[1]/2.56)
+            pwm = floor(self.ccd_message[1]/2.55)
             self.ccd_ann(['Fuel level: ' + str(pwm) + '%'])
 
         elif self.ccd_message[0] == 0x0c:

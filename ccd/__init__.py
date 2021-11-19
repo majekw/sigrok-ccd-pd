@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2017-2019 Marek Wodzinski <majek@w7i.pl>
+## Copyright (C) 2017-2021 Marek Wodzinski <majek@w7i.pl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,8 +19,7 @@
 ##
 
 '''
-CCD (Crysler Colision Detection protocol) used in old Chrysler cars.
-
+CCD (Crysler Colision Detection) protocol used in old Chrysler cars.
 
 '''
 

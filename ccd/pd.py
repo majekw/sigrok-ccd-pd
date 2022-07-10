@@ -1,7 +1,7 @@
 ##
 ## This file is part of the libsigrokdecode project.
 ##
-## Copyright (C) 2017-2021 Marek Wodzinski <majek@w7i.pl>
+## Copyright (C) 2017-2022 Marek Wodzinski <majek@w7i.pl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -164,28 +164,32 @@ class Decoder(srd.Decoder):
             #     0x81 - message from PDM
             #  BB:
             # CHECK THIS
-            if self.ccd_message[1] == 128:
+            if self.ccd_message[1] == 0x80:
                 # message from DDM
-                # 0 - lock 3 doors on PDM (DDM switch)
-                # 3 - unlock 3 doors on PDM (DDM switch)
+                # 0x01 - lock doors
+                # 0x04 - unlock doors
+                # 0 - lock all doors (DDM switch)
+                # 2 - unlock all doors (DDM switch)
                 self.ccd_ann(['from DDM: ' + hex(self.ccd_message[2]),'DDM:' + hex(self.ccd_message[2])[2:],'DDM:' + hex(self.ccd_message[2])[2:]])
-            elif self.ccd_message[1] == 129:
+            elif self.ccd_message[1] == 0x81:
                 # message from PDM
-                # 0x52 - unlock driver door, disarm alarm
-                # 0x54 - unlock all doors
-                # 0x49 - lock driver door, arm alarm
-                # 0x89 - lock driver door (RKE)
-                # 0x92 - unlock driver door (RKE)
                 # 0x01 - lock driver door (PDM switch)
                 # 0x04 - unlock driver door (PDM switch)
-                # 0 - lock driver door
-                # 1
-                # 2 - unlock driver door
-                # 3
-                # 4
-                # 5
-                # 6 - arm alarm
-                # 7 - RKE lock
+                # 0x49 - lock all doors(RKE1)
+                # 0x52 - unlock driver door (RKE1)
+                # 0x54 - unlock all doors (RKE1)
+                # 0x60 - panic button
+                # 0x89 - lock all doors (RKE2)
+                # 0x92 - unlock driver door (RKE2)
+                # 0x94 - unlock all doors (RKE2)
+                # 0 - lock all doors
+                # 1 - unlock only driver door
+                # 2 - unlock all doors
+                # 3 - arm
+                # 4 - disarm
+                # 5 - panic
+                # 6 - RKE1
+                # 7 - RKE2
                 self.ccd_ann(['from PDM: ' + hex(self.ccd_message[2]),'PDM:' + hex(self.ccd_message[2])[2:],'PDM:' + hex(self.ccd_message[2])[2:]])
             else:
                 self.ccd_ann(['unknown message from DDM/PDM: ' + hex(self.ccd_message[1]) + ' ' + hex(self.ccd_message[2]),'UNK DDM/PDM:' + hex(self.ccd_message[1])[2:]+ hex(self.ccd_message[2])[2:], 'UNK DDM/PDM:' + hex(self.ccd_message[1])[2:]+ hex(self.ccd_message[2])[2:]])
@@ -410,14 +414,14 @@ class Decoder(srd.Decoder):
             # 7 - right rear up
             # bits 7-2 = 0 if windows lock activated
             # BB: electric mirrors (idle state = 0)
-            # 0 - left mirror up
-            # 1 - left mirror down
-            # 2 - left mirror left
-            # 3 - left mirror right
-            # 4 - right mirror up
-            # 5 - right mirror down
-            # 6 - right mirror left
-            # 7 - right mirror right
+            # 0 - driver mirror up
+            # 1 - driver mirror down
+            # 2 - driver mirror left
+            # 3 - driver mirror right
+            # 4 - passenger mirror up
+            # 5 - passenger mirror down
+            # 6 - passenger mirror left
+            # 7 - passenger mirror right
 
             # windows
             dmess=''
@@ -443,21 +447,21 @@ class Decoder(srd.Decoder):
             #mirrors
             mmess=''
             if self.ccd_message[2] & 0x01:
-                mmess += " L_up"
+                mmess += " Driver_up"
             if self.ccd_message[2] & 0x02:
-                mmess += " L_down"
+                mmess += " Driver_down"
             if self.ccd_message[2] & 0x04:
-                mmess += " L_left"
+                mmess += " Driver_left"
             if self.ccd_message[2] & 0x08:
-                mmess += " L_right"
+                mmess += " Driver_right"
             if self.ccd_message[2] & 0x10:
-                mmess += " R_up"
+                mmess += " Pass_up"
             if self.ccd_message[2] & 0x20:
-                mmess += " R_down"
+                mmess += " Pass_down"
             if self.ccd_message[2] & 0x40:
-                mmess += " R_left"
+                mmess += " Pass_left"
             if self.ccd_message[2] & 0x80:
-                mmess += " R_right"
+                mmess += " Pass_right"
 
             self.ccd_ann(['Windows:'+dmess+', mirrors:'+mmess])
 
@@ -565,8 +569,10 @@ class Decoder(srd.Decoder):
         #  0x08 - CRITICAL TEMP WARNING
         #  0x04 - HI TEMP WARNING
         #  0x01 - LOW FUEL WARNING (<13%)
-        #  0x0x - LOW OIL WARNING
+        #  0x?? - LOW OIL WARNING
         # 0xF2 (242) - 1 param, 6 bytes, RESPONSE to B2 message
+        #  0xF2 81 00 00 00 73 - sent after 110ms from PDM boot
+        #  0xF2 80 00 00 00 72 - sent after 40ms from DDM boot
         # 0xF5 (245) - ? param, 4 bytes, ENGINE LAMP CTRL
         #  AA:
         #   0x00: OFF
